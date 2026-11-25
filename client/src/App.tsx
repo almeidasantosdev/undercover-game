@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import io, { Socket } from 'socket.io-client';
 import './App.css';
+import { canStartMatch, startButtonLabel, winnerTitle } from './gameDisplay.ts';
 
 // --- TIPOS (INTERFACES) ---
 interface Player {
@@ -35,8 +36,38 @@ interface GameState {
 }
 
 // URL da API (Render em produção ou Localhost em desenvolvimento)
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001';
 const socket: Socket = io(SOCKET_URL);
+
+function RulesBox() {
+  return (
+    <div className="rules-box">
+      <h3>📜 REGRAS (Passe o mouse)</h3>
+      <ul className="rules-list">
+        <li><strong>1.</strong> Cada jogador recebe uma palavra; todos iguais menos o <em>Espião</em> (que recebe uma parecida e não sabe).</li>
+        <li><strong>2.</strong> <em>Sr. Branco</em> não recebe palavra. Ele joga com os Espiões e deve se infiltrar.</li>
+        <li><strong>3.</strong> Na sua vez, dê <strong>uma pista</strong> curta sobre sua palavra.</li>
+        <li><strong>4.</strong> Proibido repetir pistas ou falar a palavra diretamente.</li>
+        <li><strong>5.</strong> Objetivo dos Inocentes: Expulsar os Espiões e o Sr. Branco.</li>
+        <li><strong>6.</strong> Objetivo dos Impostores: Não serem descobertos.</li>
+        <li><strong>7.</strong> A cada rodada ocorre uma votação para eliminar um suspeito.</li>
+        <li><strong>8.</strong> Se o <em>Sr. Branco</em> for eliminado, ele tem uma chance de chutar a palavra para vencer.</li>
+        <li><strong>9.</strong> <span style={{color: '#ffd700'}}>A PALAVRA CORRETA É A DOS CIVIS!</span></li>
+      </ul>
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <div className="site-footer">
+      Desenvolvido e Projetado por 
+      <a href="https://kadevpt.vercel.app/" target="_blank" rel="noopener noreferrer">
+        <strong>Kleidson Almeida Santos</strong>
+      </a>
+    </div>
+  );
+}
 
 function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -74,36 +105,6 @@ function App() {
 
   const votePlayer = (targetId: string) => socket.emit('vote_player', { roomId, targetId });
   const sendMrWhiteGuess = () => socket.emit('mr_white_guess', { roomId, guess: mrWhiteGuess });
-
-  // --- COMPONENTE DE REGRAS (Para não repetir código) ---
-  const RulesBox = () => (
-    <div className="rules-box">
-      <h3>📜 REGRAS (Passe o mouse)</h3>
-      <ul className="rules-list">
-        <li><strong>1.</strong> Cada jogador recebe uma palavra; todos iguais menos o <em>Espião</em> (que recebe uma parecida e não sabe).</li>
-        <li><strong>2.</strong> <em>Sr. Branco</em> não recebe palavra. Ele joga com os Espiões e deve se infiltrar.</li>
-        <li><strong>3.</strong> Na sua vez, dê <strong>uma pista</strong> curta sobre sua palavra.</li>
-        <li><strong>4.</strong> Proibido repetir pistas ou falar a palavra diretamente.</li>
-        <li><strong>5.</strong> Objetivo dos Inocentes: Expulsar os Espiões e o Sr. Branco.</li>
-        <li><strong>6.</strong> Objetivo dos Impostores: Não serem descobertos.</li>
-        <li><strong>7.</strong> A cada rodada ocorre uma votação para eliminar um suspeito.</li>
-        <li><strong>8.</strong> Se o <em>Sr. Branco</em> for eliminado, ele tem uma chance de chutar a palavra para vencer.</li>
-        <li><strong>9.</strong> <span style={{color: '#ffd700'}}>A PALAVRA CORRETA É A DOS CIVIS!</span></li>
-      </ul>
-    </div>
-  );
-
-                                                                                                                                           // --- COMPONENTE DE RODAPÉ ---
-  // --- COMPONENTE DE RODAPÉ (ATUALIZADO COM LINK) ---
-  const Footer = () => (
-    <div className="site-footer">
-      Desenvolvido e Projetado por 
-      {/* Troque o href abaixo pelo link do seu perfil real */}
-      <a href="https://kadevpt.vercel.app/" target="_blank" rel="noopener noreferrer">
-        <strong>Kleidson Almeida Santos</strong>
-      </a>
-    </div>
-  );
 
   // --- TELA DE LOGIN (ENTRADA) ---
   if (!joined) {
@@ -214,9 +215,9 @@ function App() {
             <button 
               className="btn-primary" 
               onClick={startGame} 
-              disabled={gameState.players.length < 3}
+              disabled={!canStartMatch(gameState.players.length)}
             >
-              {gameState.players.length < 3 ? 'Aguardando Jogadores (Min 3)...' : 'COMEÇAR PARTIDA AGORA'}
+              {startButtonLabel(gameState.players.length)}
             </button>
           </div>
         )}
@@ -292,9 +293,7 @@ function App() {
             <h1>🏆 Fim de Jogo!</h1>
             
             <h2 style={{color: '#ffd700'}}>
-              {gameState.winner === 'CIVILIANS_WIN' && 'Civis Venceram!'}
-              {gameState.winner === 'IMPOSTORS_WIN' && 'Impostores Venceram!'}
-              {gameState.winner === 'MR_WHITE_WINS' && 'Sr. Branco Venceu!'}
+              {winnerTitle(gameState.winner)}
             </h2>
 
             {gameState.wordPair && (
